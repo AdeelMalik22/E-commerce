@@ -1,8 +1,0 @@
-{% extends "base.html" %}
-{% block content %}
-<h1>{{ product.name }}</h1>
-<p>{{ product.description }}</p>
-<p><strong>Price:</strong> ${{ product.price }}</p>
-<p><strong>Stock:</strong> {{ product.stock }}</p>
-<button class="btn btn-success" onclick="addToCart({{ product.id }})">Add to Cart</button>
-{% endblock %}
