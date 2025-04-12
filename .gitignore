@@ -1,0 +1,21 @@
+# Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# Virtual environment
+venv/
+env/
+
+# IDE files
+.idea/
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Log files
+*.log
+
+# System files (macOS, Linux)
+.DS_Store
+Thumbs.db
