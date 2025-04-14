@@ -1,53 +1,83 @@
 from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from . import serializers
 from .models import Category, Product, Order, OrderItem, Cart
 from .serializers import CategorySerializer, ProductSerializer, OrderSerializer, CartSerializer, OrderItemSerializer
 
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.decorators import action
+from django.core.cache import cache
+
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAdminUser  # Add this
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """Manage product categories"""
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]  # Only authenticated users can manage categories
+    permission_classes = [IsAdminUser]  # Only admin users should manage categories
+    pagination_class = PageNumberPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
 
-    def retrieve(self, request, *args, **kwargs):
-        category = get_object_or_404(Category, pk=kwargs['pk'])
-        serializer = CategorySerializer(category)
-        return Response(serializer.data)
+    # Override list to add caching headers
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+        return response
 
+    # Add validation before deletion
     def destroy(self, request, *args, **kwargs):
-        category = get_object_or_404(Category, pk=kwargs['pk'])
+        category = self.get_object()
+        if category.products.exists():
+            return Response(
+                {"error": "Cannot delete category with associated products"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         category.delete()
-        return Response("Category deleted successfully",status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-from rest_framework import viewsets, filters
-from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product
-from .serializers import ProductSerializer
 
 class ProductViewSet(viewsets.ModelViewSet):
     """Manage products"""
-    queryset = Product.objects.all()
+    queryset = Product.objects.select_related('category').all()
     serializer_class = ProductSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    filterset_fields = ['price', 'stock']
-    ordering_fields = ['price', 'created_at'] #Sort the product
+    search_fields = ['name', 'description', 'category__name']
+    filterset_fields = ['price', 'stock', 'category']
+    ordering_fields = ['price', 'created_at', 'name']
+    pagination_class = PageNumberPagination
 
+    # Cache product listings
+    def list(self, request, *args, **kwargs):
+        cache_key = f'products_{request.query_params}'
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            return Response(cached_data)
 
-    def retrieve(self, request, pk=None, *args, **kwargs):
-        product = get_object_or_404(Product, pk=pk)
-        serializer = ProductSerializer(product)
+        response = super().list(request, *args, **kwargs)
+        # Set cache for 15 minutes
+        cache.set(cache_key, response.data, timeout=60 * 15)
+        return response
+
+    # Add featured products endpoint
+    @action(detail=False, methods=['get'])
+    def featured(self, request):
+        featured_products = self.queryset.filter(is_featured=True)[:10]
+        serializer = self.get_serializer(featured_products, many=True)
         return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
-        product = get_object_or_404(Product, pk=kwargs['pk'])
-        product.delete()
-        return Response("Product deleted successfully",status=status.HTTP_204_NO_CONTENT)
+    # Add validation for product creation
+    def perform_create(self, serializer):
+        if serializer.validated_data['stock'] < 0:
+            raise serializers.ValidationError("Stock cannot be negative")
+        serializer.save()
 
 
 
