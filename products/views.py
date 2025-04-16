@@ -1,3 +1,5 @@
+import hashlib
+
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status
@@ -54,16 +56,19 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ['price', 'created_at', 'name']
     pagination_class = PageNumberPagination
 
-    # Cache product listings
+
     def list(self, request, *args, **kwargs):
-        cache_key = f'products_{request.query_params}'
+        # Create a safe cache key
+        params = request.query_params.urlencode()
+        params_hash = hashlib.md5(params.encode('utf-8')).hexdigest()
+        cache_key = f'products_{params_hash}'
+
         cached_data = cache.get(cache_key)
-        if cached_data:
+        if cached_data is not None:  # Explicit None check
             return Response(cached_data)
 
         response = super().list(request, *args, **kwargs)
-        # Set cache for 15 minutes
-        cache.set(cache_key, response.data, timeout=60 * 15)
+        cache.set(cache_key, response.data, timeout=60 * 15)  # Cache for 15 minutes
         return response
 
     # Add featured products endpoint
