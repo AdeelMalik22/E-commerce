@@ -2,13 +2,14 @@ import hashlib
 
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import serializers
-from .models import Category, Product, Order, OrderItem, Cart
-from .serializers import CategorySerializer, ProductSerializer, OrderSerializer, CartSerializer, OrderItemSerializer
+from .models import Category, Product, Order, OrderItem, Cart, Review
+from .serializers import CategorySerializer, ProductSerializer, OrderSerializer, CartSerializer, OrderItemSerializer, \
+    ReviewSerializer
 
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.decorators import action
@@ -29,7 +30,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     # Override list to add caching headers
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        response['Cache-Control'] = 'public, max-age=3600'  # Cache for 1 hour
+        response['Cache-Control'] = 'public, max-age=3600'  #
         return response
 
     # Add validation before deletion
@@ -71,12 +72,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         cache.set(cache_key, response.data, timeout=60 * 15)  # Cache for 15 minutes
         return response
 
-    # Add featured products endpoint
-    @action(detail=False, methods=['get'])
-    def featured(self, request):
-        featured_products = self.queryset.filter(is_featured=True)[:10]
-        serializer = self.get_serializer(featured_products, many=True)
-        return Response(serializer.data)
 
     # Add validation for product creation
     def perform_create(self, serializer):
@@ -84,6 +79,15 @@ class ProductViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError("Stock cannot be negative")
         serializer.save()
 
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    """Manage product reviews"""
+    queryset = Review.objects.select_related('user', 'product').all()
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
