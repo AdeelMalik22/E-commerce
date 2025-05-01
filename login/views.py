@@ -14,7 +14,10 @@ from django.shortcuts import render
 
 
 class GoogleLoginUrlView(APIView):
+    """Redirect users to Google's OAuth authorization page."""
+
     def get(self, request):
+        """Build and return the Google OAuth authorization URL."""
         client_id = SocialApp.objects.get(provider='google').client_id
         redirect_uri = 'http://127.0.0.1:8000/accounts/google/login/callback/'
         scope = 'openid email profile'
@@ -38,6 +41,7 @@ class GoogleLoginUrlView(APIView):
 class GoogleCallbackView(APIView):
 
     def get(self, request):
+        """Exchange the authorization code for user details and JWT tokens."""
         code = request.GET.get('code')
 
         app = SocialApp.objects.get(provider='google')
