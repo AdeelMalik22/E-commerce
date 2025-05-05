@@ -43,6 +43,8 @@ class GoogleCallbackView(APIView):
     def get(self, request):
         """Exchange the authorization code for user details and JWT tokens."""
         code = request.GET.get('code')
+        if not code:
+            return Response({'error': 'Authorization code is required'}, status=400)
 
         app = SocialApp.objects.get(provider='google')
         token_url = 'https://oauth2.googleapis.com/token'
