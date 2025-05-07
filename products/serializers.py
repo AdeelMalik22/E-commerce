@@ -1,9 +1,5 @@
-from gc import get_objects
-
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from login.models import CustomUser
 from .models import Category, Product, Order, OrderItem, Cart, Review
 
 
