@@ -66,7 +66,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     product_id = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.all(), source='product', write_only=True
     )
-    quantity = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
 
     class Meta:
         model = OrderItem
@@ -93,7 +93,7 @@ class OrderSerializer(serializers.ModelSerializer):
 class CartSerializer(serializers.ModelSerializer):
     product_id = serializers.CharField(write_only=True)
     product = serializers.StringRelatedField(read_only=True)
-    quantity = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
 
     class Meta:
         model = Cart
