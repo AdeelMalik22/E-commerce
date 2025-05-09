@@ -91,7 +91,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class CartSerializer(serializers.ModelSerializer):
-    product_id = serializers.CharField(write_only=True)
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(), source='product', write_only=True
+    )
     product = serializers.StringRelatedField(read_only=True)
     quantity = serializers.IntegerField(min_value=1)
 
@@ -107,13 +109,8 @@ class CartSerializer(serializers.ModelSerializer):
         request = self.context['request']
         user = request.user
 
-        product_id = validated_data.pop('product_id')
+        product = validated_data.pop('product')
         quantity = validated_data.get('quantity', 1)
-
-        try:
-            product = Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            raise serializers.ValidationError({"product_id": "Invalid product ID."})
 
         cart_item, created = Cart.objects.get_or_create(
             user=user,
