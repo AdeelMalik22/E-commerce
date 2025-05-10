@@ -62,6 +62,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    """Serialize products and quantities added to a customer's order."""
+
     product = ProductSerializer(read_only=True)
     product_id = serializers.PrimaryKeyRelatedField(
         queryset=Product.objects.all(), source='product', write_only=True
