@@ -1,4 +1,6 @@
-from django.shortcuts import render, redirect
+from urllib.parse import urlencode
+
+from django.shortcuts import redirect
 
 import requests
 from rest_framework.views import APIView
@@ -7,10 +9,7 @@ from allauth.socialaccount.models import SocialApp
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from login.models import CustomUser
-from login.serializers import  AuthSerializer
-
-from django.shortcuts import render
-
+from login.serializers import AuthSerializer
 
 
 class GoogleLoginUrlView(APIView):
@@ -22,23 +21,20 @@ class GoogleLoginUrlView(APIView):
         redirect_uri = 'http://127.0.0.1:8000/accounts/google/login/callback/'
         scope = 'openid email profile'
 
-        params = (
-            "https://accounts.google.com/o/oauth2/v2/auth"
-            "?response_type=code"
-            f'&client_id={client_id}'
-            f'&redirect_uri={redirect_uri}'
-            f'&scope={scope}'
-            '&access_type=offline'
-            '&prompt=consent'
-        )
-
-
-        # url = f"https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}"
-        return redirect(params)
+        params = urlencode({
+            'response_type': 'code',
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'scope': scope,
+            'access_type': 'offline',
+            'prompt': 'consent',
+        })
+        return redirect(f'https://accounts.google.com/o/oauth2/v2/auth?{params}')
 
 
 
 class GoogleCallbackView(APIView):
+    """Complete Google OAuth and return access and refresh tokens."""
 
     def get(self, request):
         """Exchange the authorization code for user details and JWT tokens."""
