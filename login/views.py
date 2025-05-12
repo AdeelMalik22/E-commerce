@@ -54,7 +54,7 @@ class GoogleCallbackView(APIView):
             'grant_type': 'authorization_code'
         }
 
-        token_response = requests.post(token_url, data=data)
+        token_response = requests.post(token_url, data=data, timeout=10)
         token_json = token_response.json()
 
         if "access_token" not in token_json:
@@ -65,7 +65,8 @@ class GoogleCallbackView(APIView):
 
         userinfo_response = requests.get(
             'https://www.googleapis.com/oauth2/v2/userinfo',
-            headers={'Authorization': f'Bearer {access_token}'}
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10,
         )
         user_info = userinfo_response.json()
         email = user_info.get('email')
