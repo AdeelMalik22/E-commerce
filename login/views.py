@@ -70,8 +70,10 @@ class GoogleCallbackView(APIView):
         )
         user_info = userinfo_response.json()
         email = user_info.get('email')
+        if not email:
+            return Response({'error': 'Google account email is required'}, status=400)
 
-        user, created = CustomUser.objects.get_or_create(
+        user, _ = CustomUser.objects.get_or_create(
             email=email,
             defaults={
                 'username': email.split("@")[0],
@@ -80,7 +82,6 @@ class GoogleCallbackView(APIView):
                 'locale': user_info.get('locale'),
             }
         )
-        user.save()
 
         refresh = RefreshToken.for_user(user)
 
