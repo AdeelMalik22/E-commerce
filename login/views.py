@@ -54,8 +54,11 @@ class GoogleCallbackView(APIView):
             'grant_type': 'authorization_code'
         }
 
-        token_response = requests.post(token_url, data=data, timeout=10)
-        token_json = token_response.json()
+        try:
+            token_response = requests.post(token_url, data=data, timeout=10)
+            token_json = token_response.json()
+        except (requests.RequestException, ValueError):
+            return Response({'error': 'Unable to contact Google token service'}, status=502)
 
         if "access_token" not in token_json:
             return Response({'error': 'Failed to get access token', 'details': token_json}, status=400)
@@ -63,12 +66,15 @@ class GoogleCallbackView(APIView):
 
         access_token = token_json['access_token']
 
-        userinfo_response = requests.get(
-            'https://www.googleapis.com/oauth2/v2/userinfo',
-            headers={'Authorization': f'Bearer {access_token}'},
-            timeout=10,
-        )
-        user_info = userinfo_response.json()
+        try:
+            userinfo_response = requests.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'},
+                timeout=10,
+            )
+            user_info = userinfo_response.json()
+        except (requests.RequestException, ValueError):
+            return Response({'error': 'Unable to retrieve Google profile'}, status=502)
         email = user_info.get('email')
         if not email:
             return Response({'error': 'Google account email is required'}, status=400)
