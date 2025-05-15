@@ -61,7 +61,7 @@ class GoogleCallbackView(APIView):
             return Response({'error': 'Unable to contact Google token service'}, status=502)
 
         if "access_token" not in token_json:
-            return Response({'error': 'Failed to get access token', 'details': token_json}, status=400)
+            return Response({'error': 'Failed to get access token'}, status=400)
 
 
         access_token = token_json['access_token']
