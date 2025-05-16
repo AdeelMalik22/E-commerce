@@ -27,6 +27,10 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-only-change-me')
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
 ALLOWED_HOSTS = [host for host in os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',') if host]
+GOOGLE_REDIRECT_URI = os.getenv(
+    'GOOGLE_REDIRECT_URI',
+    'http://127.0.0.1:8000/accounts/google/login/callback/',
+)
 
 
 # Application definition

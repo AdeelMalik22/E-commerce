@@ -1,5 +1,6 @@
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.shortcuts import redirect
 
 import requests
@@ -18,7 +19,7 @@ class GoogleLoginUrlView(APIView):
     def get(self, request):
         """Build and return the Google OAuth authorization URL."""
         client_id = SocialApp.objects.get(provider='google').client_id
-        redirect_uri = 'http://127.0.0.1:8000/accounts/google/login/callback/'
+        redirect_uri = settings.GOOGLE_REDIRECT_URI
         scope = 'openid email profile'
 
         params = urlencode({
@@ -44,7 +45,7 @@ class GoogleCallbackView(APIView):
 
         app = SocialApp.objects.get(provider='google')
         token_url = 'https://oauth2.googleapis.com/token'
-        redirect_uri = 'http://127.0.0.1:8000/accounts/google/login/callback/'
+        redirect_uri = settings.GOOGLE_REDIRECT_URI
 
         data = {
             "code": code,
