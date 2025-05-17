@@ -57,6 +57,8 @@ class GoogleCallbackView(APIView):
 
         try:
             token_response = requests.post(token_url, data=data, timeout=10)
+            if not token_response.ok:
+                return Response({'error': 'Google authorization code was rejected'}, status=400)
             token_json = token_response.json()
         except (requests.RequestException, ValueError):
             return Response({'error': 'Unable to contact Google token service'}, status=502)
@@ -73,6 +75,8 @@ class GoogleCallbackView(APIView):
                 headers={'Authorization': f'Bearer {access_token}'},
                 timeout=10,
             )
+            if not userinfo_response.ok:
+                return Response({'error': 'Google profile request was rejected'}, status=502)
             user_info = userinfo_response.json()
         except (requests.RequestException, ValueError):
             return Response({'error': 'Unable to retrieve Google profile'}, status=502)
