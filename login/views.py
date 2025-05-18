@@ -39,7 +39,7 @@ class GoogleCallbackView(APIView):
 
     def get(self, request):
         """Exchange the authorization code for user details and JWT tokens."""
-        code = request.GET.get('code')
+        code = request.GET.get('code', '').strip()
         if not code:
             return Response({'error': 'Authorization code is required'}, status=400)
 
@@ -80,7 +80,7 @@ class GoogleCallbackView(APIView):
             user_info = userinfo_response.json()
         except (requests.RequestException, ValueError):
             return Response({'error': 'Unable to retrieve Google profile'}, status=502)
-        email = user_info.get('email')
+        email = user_info.get('email', '').strip().lower()
         if not email:
             return Response({'error': 'Google account email is required'}, status=400)
 
