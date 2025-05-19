@@ -39,6 +39,9 @@ class GoogleCallbackView(APIView):
 
     def get(self, request):
         """Exchange the authorization code for user details and JWT tokens."""
+        if request.GET.get('error'):
+            return Response({'error': 'Google sign-in was cancelled'}, status=400)
+
         code = request.GET.get('code', '').strip()
         if not code:
             return Response({'error': 'Authorization code is required'}, status=400)
