@@ -131,6 +131,11 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         order = get_object_or_404(Order, id=order_id, customer=self.request.user)
         product = get_object_or_404(Product, id=product_id)
 
+        if quantity > product.stock:
+            raise serializers.ValidationError(
+                {'quantity': 'Requested quantity exceeds available stock.'}
+            )
+
         # Check if item already exists in this order
         existing_item = OrderItem.objects.filter(order=order, product=product).first()
 
