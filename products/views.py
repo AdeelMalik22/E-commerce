@@ -120,7 +120,7 @@ class OrderItemViewSet(viewsets.ModelViewSet):
     def destroy(self, request,pk=None, *args, **kwargs):
         order = get_object_or_404(Order, pk=pk, customer=request.user)
         order.delete()
-        return Response("Order deleted successfully",status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, serializer):
         order_id = self.request.data.get('order_id')
@@ -174,4 +174,4 @@ class CartViewSet(viewsets.ModelViewSet):
     def destroy(self, request, *args, **kwargs):
         cart = get_object_or_404(Cart, user=self.request.user,pk=kwargs['pk'])
         cart.delete()
-        return Response("Cart deleted successfully",status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
