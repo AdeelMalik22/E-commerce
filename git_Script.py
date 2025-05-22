@@ -57,7 +57,7 @@ def get_last_date():
 
 def save_last_date(date_str):
     with open(STATE_FILE, "w") as f:
-        f.write(date_str)
+        f.write(f"{date_str}\n")
 
 
 def get_next_date():
