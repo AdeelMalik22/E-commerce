@@ -1,6 +1,7 @@
 import hashlib
 
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, status, permissions
 from rest_framework.permissions import IsAuthenticated
@@ -122,19 +123,24 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         order.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @transaction.atomic
     def perform_create(self, serializer):
         order_id = self.request.data.get('order_id')
         product_id = self.request.data.get('product_id')
         quantity = int(self.request.data.get('quantity', 1))  # ensure it's an int
 
         # Get order and product
-        order = get_object_or_404(Order, id=order_id, customer=self.request.user)
-        product = get_object_or_404(Product, id=product_id)
+        order = get_object_or_404(
+            Order.objects.select_for_update(), id=order_id, customer=self.request.user
+        )
+        product = get_object_or_404(Product.objects.select_for_update(), id=product_id)
 
         if quantity > product.stock:
             raise serializers.ValidationError(
                 {'quantity': 'Requested quantity exceeds available stock.'}
             )
+        product.stock -= quantity
+        product.save(update_fields=['stock'])
 
         # Check if item already exists in this order
         existing_item = OrderItem.objects.filter(order=order, product=product).first()
