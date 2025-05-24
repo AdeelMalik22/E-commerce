@@ -118,9 +118,17 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         serializer = OrderSerializer(order)
         return Response(serializer.data)
 
-    def destroy(self, request,pk=None, *args, **kwargs):
-        order = get_object_or_404(Order, pk=pk, customer=request.user)
-        order.delete()
+    @transaction.atomic
+    def destroy(self, request, pk=None, *args, **kwargs):
+        item = get_object_or_404(
+            OrderItem.objects.select_related('product').select_for_update(),
+            pk=pk,
+            order__customer=request.user,
+        )
+        product = Product.objects.select_for_update().get(pk=item.product_id)
+        product.stock += item.quantity
+        product.save(update_fields=['stock'])
+        item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @transaction.atomic
