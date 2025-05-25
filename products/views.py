@@ -128,6 +128,9 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         product = Product.objects.select_for_update().get(pk=item.product_id)
         product.stock += item.quantity
         product.save(update_fields=['stock'])
+        order = item.order
+        order.total_price -= item.price
+        order.save(update_fields=['total_price'])
         item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
