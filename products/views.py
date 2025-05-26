@@ -104,6 +104,17 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Create an order with the logged-in user"""
         serializer.save(customer=self.request.user)
 
+    @transaction.atomic
+    def destroy(self, request, *args, **kwargs):
+        """Delete an order and return its reserved products to stock."""
+        order = self.get_object()
+        for item in order.items.all():
+            product = Product.objects.select_for_update().get(pk=item.product_id)
+            product.stock += item.quantity
+            product.save(update_fields=['stock'])
+        order.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):
