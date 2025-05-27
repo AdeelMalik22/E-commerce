@@ -19,6 +19,14 @@ from django.core.cache import cache
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser  # Add this
 
+
+class IsReviewOwnerOrReadOnly(permissions.BasePermission):
+    """Allow review changes only to the user who created the review."""
+
+    def has_object_permission(self, request, view, obj):
+        return request.method in permissions.SAFE_METHODS or obj.user == request.user
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     """Manage product categories"""
     queryset = Category.objects.all()
@@ -85,7 +93,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     """Manage product reviews"""
     queryset = Review.objects.select_related('user', 'product').all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsReviewOwnerOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
