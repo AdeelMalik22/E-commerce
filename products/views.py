@@ -27,6 +27,15 @@ class IsReviewOwnerOrReadOnly(permissions.BasePermission):
         return request.method in permissions.SAFE_METHODS or obj.user == request.user
 
 
+class IsAdminOrReadOnly(permissions.BasePermission):
+    """Allow public catalog reads and restrict catalog changes to staff."""
+
+    def has_permission(self, request, view):
+        return request.method in permissions.SAFE_METHODS or bool(
+            request.user and request.user.is_staff
+        )
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     """Manage product categories"""
     queryset = Category.objects.all()
@@ -59,7 +68,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """Manage products"""
     queryset = Product.objects.select_related('category').all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAdminOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description', 'category__name']
     filterset_fields = ['price', 'stock', 'category']
