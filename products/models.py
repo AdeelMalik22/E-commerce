@@ -6,6 +6,8 @@ from login.models import CustomUser
 
 
 class SoftDeleteModel(models.Model):
+    """Base model for records that can be hidden without being deleted."""
+
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -92,6 +94,5 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} rated {self.product.name} ({self.rating}⭐)"
-
 
 
