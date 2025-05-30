@@ -19,6 +19,9 @@ class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True)
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
@@ -32,6 +35,9 @@ class Product(SoftDeleteModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', null=True, blank =True)
+
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -94,5 +100,4 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} rated {self.product.name} ({self.rating}⭐)"
-
 
