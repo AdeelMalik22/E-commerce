@@ -75,6 +75,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ['price', 'created_at', 'name']
     pagination_class = PageNumberPagination
 
+    def get_queryset(self):
+        """Show active products publicly and all products to staff users."""
+        queryset = Product.objects.select_related('category').all()
+        if self.request.user.is_authenticated and self.request.user.is_staff:
+            return queryset
+        return queryset.filter(is_active=True)
 
     def list(self, request, *args, **kwargs):
         # Create a safe cache key
