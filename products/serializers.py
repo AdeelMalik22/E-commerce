@@ -114,6 +114,9 @@ class CartSerializer(serializers.ModelSerializer):
         product = validated_data.pop('product')
         quantity = validated_data.get('quantity', 1)
 
+        if not product.is_active:
+            raise serializers.ValidationError({'product_id': 'This product is unavailable.'})
+
         cart_item, created = Cart.objects.get_or_create(
             user=user,
             product=product,
@@ -121,8 +124,16 @@ class CartSerializer(serializers.ModelSerializer):
         )
 
         if not created:
-            # Optional: Update quantity if already exists
+            if cart_item.quantity + quantity > product.stock:
+                raise serializers.ValidationError(
+                    {'quantity': 'Requested quantity exceeds available stock.'}
+                )
             cart_item.quantity += quantity
             cart_item.save()
+        elif quantity > product.stock:
+            cart_item.delete()
+            raise serializers.ValidationError(
+                {'quantity': 'Requested quantity exceeds available stock.'}
+            )
 
         return cart_item
