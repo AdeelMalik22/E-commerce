@@ -148,8 +148,11 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         return OrderItem.objects.filter(order__customer=self.request.user)
 
     def retrieve(self, request, pk=None, *args, **kwargs):
-        order = get_object_or_404(Order, pk=pk, customer=request.user)
-        serializer = OrderSerializer(order)
+        item = get_object_or_404(
+            self.get_queryset().select_related('product'),
+            pk=pk,
+        )
+        serializer = self.get_serializer(item)
         return Response(serializer.data)
 
     @transaction.atomic
