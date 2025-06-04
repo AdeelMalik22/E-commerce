@@ -1,4 +1,5 @@
 import hashlib
+import uuid
 
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -18,6 +19,13 @@ from django.core.cache import cache
 
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAdminUser  # Add this
+
+PRODUCT_CACHE_VERSION_KEY = 'products_cache_version'
+
+
+def invalidate_product_cache():
+    """Move product list requests to a fresh cache namespace."""
+    cache.set(PRODUCT_CACHE_VERSION_KEY, uuid.uuid4().hex, timeout=None)
 
 
 class IsReviewOwnerOrReadOnly(permissions.BasePermission):
@@ -86,7 +94,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         # Create a safe cache key
         params = request.query_params.urlencode()
         params_hash = hashlib.md5(params.encode('utf-8')).hexdigest()
-        cache_key = f'products_{params_hash}'
+        version = cache.get(PRODUCT_CACHE_VERSION_KEY, 'initial')
+        visibility = 'staff' if request.user.is_authenticated and request.user.is_staff else 'public'
+        cache_key = f'products_{visibility}_{version}_{params_hash}'
 
         cached_data = cache.get(cache_key)
         if cached_data is not None:  # Explicit None check
@@ -102,6 +112,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         if serializer.validated_data['stock'] < 0:
             raise serializers.ValidationError("Stock cannot be negative")
         serializer.save()
+        invalidate_product_cache()
+
+    def perform_update(self, serializer):
+        serializer.save()
+        invalidate_product_cache()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        invalidate_product_cache()
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
