@@ -51,10 +51,17 @@ class Product(SoftDeleteModel):
 
 
 class Order(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('confirmed', 'Confirmed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
     id = ShortUUIDField(primary_key=True)  # Use short UUIDs
     customer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="orders")
     created_at = models.DateTimeField(auto_now_add=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
 
     def __str__(self):
         return f"Order {self.id} by {self.customer.username}"
@@ -100,4 +107,3 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.user.username} rated {self.product.name} ({self.rating}⭐)"
-
