@@ -146,6 +146,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         """Create an order with the logged-in user"""
         serializer.save(customer=self.request.user)
 
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def cancel(self, request, *args, **kwargs):
+        """Cancel a pending order and return its reserved products to stock."""
+        order = self.get_queryset().select_for_update().get(pk=kwargs['pk'])
+        if order.status != 'pending':
+            return Response(
+                {'error': 'Only pending orders can be cancelled.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        for item in order.items.all():
+            product = Product.objects.select_for_update().get(pk=item.product_id)
+            product.stock += item.quantity
+            product.save(update_fields=['stock'])
+
+        order.status = 'cancelled'
+        order.save(update_fields=['status'])
+        return Response(OrderSerializer(order).data)
+
     @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         """Delete an order and return its reserved products to stock."""
