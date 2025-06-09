@@ -264,6 +264,51 @@ class CartViewSet(viewsets.ModelViewSet):
         """Ensure the cart belongs to the authenticated user"""
         serializer.save(user=self.request.user)
 
+    @action(detail=False, methods=['post'])
+    @transaction.atomic
+    def checkout(self, request):
+        """Create a pending order from the user's cart and reserve its stock."""
+        cart_items = list(
+            Cart.objects.select_for_update()
+            .filter(user=request.user)
+            .order_by('product_id')
+        )
+        if not cart_items:
+            return Response(
+                {'error': 'Cannot checkout with an empty cart.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        order = Order.objects.create(customer=request.user)
+        total_price = 0
+
+        for cart_item in cart_items:
+            product = Product.objects.select_for_update().get(pk=cart_item.product_id)
+            if not product.is_active:
+                raise serializers.ValidationError(
+                    {'product': f'{product.name} is no longer available.'}
+                )
+            if cart_item.quantity > product.stock:
+                raise serializers.ValidationError(
+                    {'quantity': f'Insufficient stock for {product.name}.'}
+                )
+
+            item_price = product.price * cart_item.quantity
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=cart_item.quantity,
+                price=item_price,
+            )
+            product.stock -= cart_item.quantity
+            product.save(update_fields=['stock'])
+            total_price += item_price
+
+        order.total_price = total_price
+        order.save(update_fields=['total_price'])
+        Cart.objects.filter(user=request.user).delete()
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
     def destroy(self, request, *args, **kwargs):
         cart = get_object_or_404(Cart, user=self.request.user,pk=kwargs['pk'])
         cart.delete()
