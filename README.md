@@ -24,7 +24,9 @@ Product APIs are available under `/api/`:
 - `/api/categories/`
 - `/api/products/`
 - `/api/carts/`
+- `/api/carts/checkout/` — convert the authenticated user's cart into a pending order.
 - `/api/orders/`
+- `/api/orders/<id>/cancel/` — cancel a pending order and restore reserved stock.
 - `/api/order-items/`
 - `/api/reviews/`
 
@@ -56,6 +58,9 @@ Google OAuth endpoints:
 - `DJANGO_DEBUG` — `True` or `False`.
 - `DJANGO_ALLOWED_HOSTS` — comma-separated allowed hosts.
 - `GOOGLE_REDIRECT_URI` — registered Google OAuth callback URL.
+
+Orders begin with `pending` status and can be cancelled by their owner while
+pending. Payment confirmation and shipping fulfillment are not yet integrated.
 
 The Google provider credentials must also be configured through Django Allauth's `SocialApp` records.
 
