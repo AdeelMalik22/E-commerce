@@ -1,3 +1,5 @@
+import hmac
+import secrets
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -21,12 +23,15 @@ class GoogleLoginUrlView(APIView):
         client_id = SocialApp.objects.get(provider='google').client_id
         redirect_uri = settings.GOOGLE_REDIRECT_URI
         scope = 'openid email profile'
+        state = secrets.token_urlsafe(32)
+        request.session['google_oauth_state'] = state
 
         params = urlencode({
             'response_type': 'code',
             'client_id': client_id,
             'redirect_uri': redirect_uri,
             'scope': scope,
+            'state': state,
             'access_type': 'offline',
             'prompt': 'consent',
         })
@@ -41,6 +46,11 @@ class GoogleCallbackView(APIView):
         """Exchange the authorization code for user details and JWT tokens."""
         if request.GET.get('error'):
             return Response({'error': 'Google sign-in was cancelled'}, status=400)
+
+        state = request.GET.get('state', '')
+        expected_state = request.session.pop('google_oauth_state', '')
+        if not expected_state or not hmac.compare_digest(state, expected_state):
+            return Response({'error': 'Invalid OAuth state'}, status=400)
 
         code = request.GET.get('code', '').strip()
         if not code:
