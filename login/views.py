@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import hmac
 import secrets
 from urllib.parse import urlencode
@@ -24,7 +26,12 @@ class GoogleLoginUrlView(APIView):
         redirect_uri = settings.GOOGLE_REDIRECT_URI
         scope = 'openid email profile'
         state = secrets.token_urlsafe(32)
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = base64.urlsafe_b64encode(
+            hashlib.sha256(code_verifier.encode()).digest()
+        ).rstrip(b'=').decode()
         request.session['google_oauth_state'] = state
+        request.session['google_oauth_code_verifier'] = code_verifier
 
         params = urlencode({
             'response_type': 'code',
@@ -32,6 +39,8 @@ class GoogleLoginUrlView(APIView):
             'redirect_uri': redirect_uri,
             'scope': scope,
             'state': state,
+            'code_challenge': code_challenge,
+            'code_challenge_method': 'S256',
             'access_type': 'offline',
             'prompt': 'consent',
         })
@@ -52,6 +61,10 @@ class GoogleCallbackView(APIView):
         if not expected_state or not hmac.compare_digest(state, expected_state):
             return Response({'error': 'Invalid OAuth state'}, status=400)
 
+        code_verifier = request.session.pop('google_oauth_code_verifier', '')
+        if not code_verifier:
+            return Response({'error': 'Invalid OAuth session'}, status=400)
+
         code = request.GET.get('code', '').strip()
         if not code:
             return Response({'error': 'Authorization code is required'}, status=400)
@@ -66,6 +79,7 @@ class GoogleCallbackView(APIView):
             'client_secret': app.secret,
             'redirect_uri': redirect_uri,
             'grant_type': 'authorization_code'
+            , 'code_verifier': code_verifier
         }
 
         try:
