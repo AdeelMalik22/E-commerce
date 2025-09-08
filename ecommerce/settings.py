@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 ]
 
 
+#this is a new branch
 
 AUTH_USER_MODEL = "login.CustomUser"
 SITE_ID = 1
